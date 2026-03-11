@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: PMPL-1.0-or-later
+= AcceleratorGate.jl
+Jonathan D. A. Jewell <j.d.a.jewell@open.ac.uk>
+:toc:
+
+== Overview
+
+Unified accelerator abstraction layer for Julia — GPU, TPU, NPU, FPGA, QPU, DSP, and more.
+
+== Installation
+
+[source,julia]
+----
+using Pkg
+Pkg.add(url="https://github.com/hyperpolymath/AcceleratorGate.jl")
+----
+
+== License
+
+PMPL-1.0-or-later (MPL-2.0 fallback in Project.toml for Julia ecosystem compatibility).
