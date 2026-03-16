@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Clade declaration — part of the gv-clade-index registry
+# See: https://github.com/hyperpolymath/gv-clade-index
+
+[identity]
+uuid = "b567df91-0bb8-56ea-a10c-2c0c5557fe3c"
+primary-forge = "github"
+primary-owner = "hyperpolymath"
+canonical-name = "AcceleratorGate.jl"
+prefixed-name = "dx-AcceleratorGate.jl"
+
+[clade]
+primary = "dx"
+secondary = []
+assigned = "2026-03-16"
+rationale = ""
+
+[forges]
+github = "hyperpolymath/AcceleratorGate.jl"
+gitlab = "hyperpolymath/AcceleratorGate.jl"
+bitbucket = "hyperpolymath/AcceleratorGate.jl"
+
+[lineage]
+type = "standalone"
+parent = "Julia package — accelerator gate"
+born = "2026-03-16"
