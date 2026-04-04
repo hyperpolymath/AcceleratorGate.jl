@@ -1,32 +1,128 @@
 // SPDX-License-Identifier: PMPL-1.0-or-later
 = AcceleratorGate.jl — Show Me The Receipts
+Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 :toc:
+:toclevels: 3
 :icons: font
 
-The README makes claims. This file backs them up.
+The README makes claims. This file backs them up with specific code locations,
+honest caveats, and enough trace information for an external reviewer to navigate
+the codebase cold.
 
-[quote, README]
+== Claim 1: Unified accelerator abstraction layer for GPU, TPU, NPU, FPGA, QPU, DSP, and more
+
+[quote, README — Overview]
 ____
-Jonathan D. A. Jewell <j.d.a.jewell@open.ac.uk>
+Unified accelerator abstraction layer for Julia — GPU, TPU, NPU, FPGA, QPU, DSP, and more.
 ____
 
-== Technology Choices
+*How it works:* `src/AcceleratorGate.jl` defines a flat type hierarchy rooted at the
+abstract type `AbstractBackend`. Every concrete accelerator family is its own struct:
+`CUDABackend(device::Int)`, `ROCmBackend(device::Int)`, `MetalBackend(device::Int)`,
+`TPUBackend`, `NPUBackend`, `DSPBackend`, `PPUBackend`, `MathBackend`, `FPGABackend`,
+`VPUBackend`, `QPUBackend`, and `CryptoBackend`. Two union types further group them:
+`GPUBackend = Union{CUDABackend, ROCmBackend, MetalBackend}` and `CoprocessorBackend`
+covering the remaining nine specialised units. There are also `JuliaBackend`,
+`RustBackend(lib_path)`, and `ZigBackend(lib_path)` for non-hardware execution paths.
 
-[cols="1,2"]
-|===
-| Technology | Learn More
+Backend selection is process-global via a `Ref{AbstractBackend}` thread-unsafe singleton
+(`_current_backend`). The `@with_backend` macro provides scoped override with restore-on-exit.
 
-| **Julia** | https://julialang.org
-|===
+*Honest caveat:* Availability detection is entirely environment-variable-driven
+(`AXIOM_CUDA_AVAILABLE`, `AXIOM_ROCM_AVAILABLE`, etc.). There is no runtime
+probing of actual hardware. On a machine with a GPU that does not set these
+vars, `detect_gpu()` returns `nothing`. The module is a dispatch scaffold, not a
+hardware driver.
+
+== Claim 2: Platform-aware auto-detection covering mobile, embedded, server, and desktop
+
+[quote, README — Source module docstring]
+____
+Platform-aware auto-detection (mobile, embedded, server, desktop)
+____
+
+*How it works:* `detect_platform()` in `src/AcceleratorGate.jl` (line ~236) probes
+`Sys.islinux()`, `Sys.isapple()`, `Sys.iswindows()`, `Sys.isbsd()` and falls back to
+`uname -s` for MINIX and OpenBSD. Android is distinguished from Linux via the
+`ANDROID_ROOT` environment variable and `/system/app` path presence. iOS is
+distinguished from macOS by the heuristic `aarch64 + no /usr/local`. Embedded
+environments are flagged at `CPU_THREADS <= 2 AND total_memory < 512 MiB`; server
+environments at `CPU_THREADS >= 16 OR total_memory > 32 GiB`. Architecture
+compatibility is enforced in `_arch_compatible/2` — for example, `MetalBackend`
+is only considered compatible with `:aarch64`.
+
+`select_backend` uses this platform information together with `DeviceCapabilities`
+structs and cost estimates to choose the cheapest suitable backend for an operation.
+
+*Honest caveat:* The iOS heuristic (`aarch64 + no /usr/local`) is fragile — Apple
+Silicon Macs running in unusual configurations may be misidentified. The server
+heuristic fires on any machine with 16+ threads, including developer workstations.
+
+== How It Is Checked
+
+Tests live in `test/runtests.jl`. Coverage includes:
+
+- All 15 backend struct constructors satisfy `isa AbstractBackend`
+- Union membership (`CUDABackend isa GPUBackend`, `TPUBackend isa CoprocessorBackend`)
+- `@with_backend` scoping restores original backend after block exit
+- Detection returns `false`/`0`/`nothing` without env vars set
+- Detection returns correct types when env vars are set (`withenv(...)`)
+- `capability_report()` produces a dict with `generated_at`, `strategy_order`,
+  `backends`, `platform`, and `selected_backend` keys
+- `runtime_diagnostics()` accumulates and resets fallback counters correctly
+- `_coprocessor_label`, `_coprocessor_key`, `_coprocessor_required_env` helpers
 
 == File Map
 
-[cols="1,2"]
+[cols="2,4"]
 |===
 | Path | What's There
 
-| `src/` | Source code
-| `test(s)/` | Test suite
+| `src/AcceleratorGate.jl`
+| Entire module — backend type hierarchy, env-var detection, `@with_backend` macro,
+  platform probing (`PlatformInfo`, `detect_platform`), `DeviceCapabilities`, `select_backend`,
+  memory tracking, operation registry, self-healing hook generator, capability report.
+  ~600 lines, single file.
+
+| `test/runtests.jl`
+| Full test suite. Uses `withenv(...)` to exercise detection logic without real hardware.
+  Covers types, unions, scoped dispatch, diagnostics, resource-aware selection, and
+  `generate_self_healing_hooks`.
+
+| `Project.toml`
+| Package identity (`uuid`, `name = "AcceleratorGate"`), Julia version compat,
+  and test dependencies (`Test`). MPL-2.0 fallback declared here for ecosystem
+  compatibility.
+
+| `LICENSE` / `LICENSES/`
+| PMPL-1.0-or-later full text; MPL-2.0 fallback text for Julia registry.
+|===
+
+== Dogfooded Across The Account
+
+[cols="2,4"]
+|===
+| Repo | How AcceleratorGate (or this domain) appears
+
+| `Hyperpolymath.jl`
+| Listed as one of the six "Metal Layer" packages pulled in by the umbrella metapackage
+  (`using AcceleratorGate` in `src/Hyperpolymath.jl`).
+
+| `HackenbushGames.jl`
+| Includes `src/backends/abstract.jl` and calls `current_backend()` / `backend_move_gen`
+  in `moves/2` for coprocessor-offloaded move generation over large edge sets.
+
+| `LowLevel.jl`
+| Sibling Metal Layer package; coordinates with `SiliconCore` and `HardwareResilience`
+  for the execution layer that `AcceleratorGate` dispatches into.
+
+| `developer-ecosystem/julia-ecosystem/`
+| Julia ecosystem monorepo where all standalone `.jl` packages are also tracked as
+  subdir packages; accelerator dispatch patterns are referenced in Axiom.jl backend docs.
+
+| `statistease`
+| Uses Julia batch scripts for statistical processing; the accelerator abstraction
+  pattern established here informs backend selection in compute-heavy Julia scripts.
 |===
 
 == Questions?
