@@ -391,3 +391,6 @@ using AcceleratorGate
         @test b isa JuliaBackend
     end
 end
+
+include("e2e_test.jl")
+include("property_test.jl")
