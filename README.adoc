@@ -1,17 +1,46 @@
-// SPDX-License-Identifier: PMPL-1.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 // SPDX-FileCopyrightText: 2025-2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 
 = AcceleratorGate.jl
 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 :toc:
 
-image:https://img.shields.io/badge/OpenSSF-Best_Practices-green?logo=opensourcesecurity[OpenSSF Best Practices,link="https://www.bestpractices.dev/en/projects/new?repo_url=https://github.com/hyperpolymath/AcceleratorGate.jl"]
-image:https://img.shields.io/badge/License-PMPL--1.0-blue.svg[License: PMPL-1.0,link="https://github.com/hyperpolymath/palimpsest-license"]
-image:https://api.thegreenwebfoundation.org/greencheckimage/github.com[Green Web,link="https://www.thegreenwebfoundation.org/green-web-check/?url=github.com"]
+image:https://img.shields.io/badge/License-MPL--2.0-blue.svg[License: MPL-2.0,link="https://www.mozilla.org/MPL/2.0/"]
 
-== Overview
+== What this is
 
-Unified accelerator abstraction layer for Julia — GPU, TPU, NPU, FPGA, QPU, DSP, and more.
+AcceleratorGate.jl is a small, dependency-light *backend-selection layer*:
+a type hierarchy of compute backends (`JuliaBackend`, `CUDABackend`,
+`ROCmBackend`, `MetalBackend`, `TPUBackend`, `NPUBackend`, `FPGABackend`,
+`QPUBackend`, `DSPBackend`, …), environment-based availability detection,
+a platform probe, and a heuristic `select_backend` / `estimate_cost` /
+`fits_on_device` API.
+
+It was extracted from `Axiom.jl`'s backend module to remove duplicated
+selection logic shared by a few packages in the same author's ecosystem.
+
+== What this is NOT (honest scope)
+
+It does **not** execute GPU/accelerator computation. It contains no
+kernels and links no vendor runtimes. It is purely the *typing and
+selection* layer — the decision "which backend should this run on, and
+does it fit" — leaving execution to the real acceleration packages below.
+
+== Prior art
+
+The Julia ecosystem already covers accelerated compute thoroughly:
+
+- *Actual acceleration*: `CUDA.jl`, `AMDGPU.jl`, `Metal.jl`, `oneAPI.jl`
+  — vendor GPU runtimes and kernels.
+- *Backend-agnostic kernels / array adaption*: `KernelAbstractions.jl`,
+  `GPUArrays.jl`, `Adapt.jl` — write-once-run-on-any-backend kernels and
+  array wrapping. These overlap conceptually with AcceleratorGate's
+  selection idea and are more mature for kernel portability.
+
+AcceleratorGate is deliberately narrower than all of the above: a tiny
+type/selection seam with no compute and minimal deps. If you need to run
+work on a GPU, use the packages above; AcceleratorGate only helps a host
+package *decide* and *describe* backends uniformly.
 
 == Installation
 
@@ -21,6 +50,24 @@ using Pkg
 Pkg.add(url="https://github.com/hyperpolymath/AcceleratorGate.jl")
 ----
 
+== Usage
+
+[source,julia]
+----
+using AcceleratorGate
+
+select_backend(:matmul, 1_000_000)            # => JuliaBackend()  (no accelerator present)
+fits_on_device(JuliaBackend(), 10^6)          # => false
+estimate_cost(JuliaBackend(), :matmul, 1000)  # => 1000.0
+detect_platform()                             # => PlatformInfo(:linux, :x86_64, false, false, false, v"1.12", 64, :little)
+capability_report()                           # => Dict: platform, per-backend availability, strategy order
+----
+
+(Output above is from an actual run on a CPU-only Linux host with no
+accelerators installed — backends report `available => false` and
+selection falls back to `JuliaBackend`.)
+
 == License
 
-PMPL-1.0-or-later (MPL-2.0 fallback in Project.toml for Julia ecosystem compatibility).
+MPL-2.0 (OSI-approved). See `LICENSE`, `LICENSES/MPL-2.0.txt`, and
+`REUSE.toml`.
