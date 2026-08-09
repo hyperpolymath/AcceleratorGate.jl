@@ -288,6 +288,81 @@ using AcceleratorGate
         @test is_specialized(JuliaBackend(), :matmul) == false
     end
 
+    @testset "Operation-first provider admission" begin
+        clear_provider_registry!()
+        simulation_claim = CapabilityEvidence(
+            "test.simulated.tpu", v"1.0.0", "enaction.tensor.f32.mul", v"1.0.0";
+            lanes=(:advisory,), support=:conformant,
+            determinism=:tolerance_bounded, implementation=:simulation,
+            device_class=:tpu,
+        )
+        simulation = FunctionProvider("test.simulated.tpu", v"1.0.0", [simulation_claim]) do _, left, right
+            left .* right
+        end
+        register_provider!(simulation)
+
+        refused = OperationRequest("enaction.tensor.f32.mul";
+            layout=(len=2,), allow_simulation=false)
+        @test_throws ErrorException plan_operation(refused)
+
+        admitted = OperationRequest("enaction.tensor.f32.mul";
+            layout=(len=2,), allow_simulation=true)
+        value, evidence = execute_operation(admitted, Float32[2, 3], Float32[4, 5])
+        @test value == Float32[8, 15]
+        @test evidence.provider_id == "test.simulated.tpu"
+        @test evidence.implementation == :simulation
+        @test evidence.lane == :advisory
+
+        @test_throws ArgumentError CapabilityEvidence(
+            "bad.tpu", v"1.0.0", "enaction.tensor.f32.mul", v"1.0.0";
+            lanes=(:authoritative,), determinism=:tolerance_bounded,
+        )
+        @test_throws ArgumentError register_provider!(simulation)
+        clear_provider_registry!()
+    end
+
+    @testset "Runtime failure never silently retries" begin
+        clear_provider_registry!()
+        claim(id, implementation) = CapabilityEvidence(
+            id, v"1.0.0", "enaction.tensor.f32.add", v"1.0.0";
+            lanes=(:advisory,), support=:resilient,
+            determinism=:tolerance_bounded, implementation,
+        )
+        failing = FunctionProvider("a.hardware", v"1.0.0", [claim("a.hardware", :hardware)]) do _, _...
+            error("planted provider failure")
+        end
+        reference = FunctionProvider("z.reference", v"1.0.0", [claim("z.reference", :reference)]) do _, left, right
+            left .+ right
+        end
+        register_provider!(reference)
+        register_provider!(failing)
+        request = OperationRequest("enaction.tensor.f32.add"; layout=(len=1,))
+        @test_throws ErrorException execute_operation(request, Float32[1], Float32[2])
+        clear_provider_registry!()
+    end
+
+    if haskey(ENV, "ENACTION_ACCELERATOR_LIB")
+        @testset "Enaction pure-Zig provider" begin
+            clear_provider_registry!()
+            provider = EnactionZigProvider(ENV["ENACTION_ACCELERATOR_LIB"])
+            register_provider!(provider)
+            @test length(provider_capabilities(provider)) == 5
+
+            request = OperationRequest("enaction.tensor.f32.matmul";
+                layout=(m=2, k=3, n=2), minimum_support=:resilient)
+            output, evidence = execute_operation(request,
+                Float32[1 2 3; 4 5 6], Float32[7 8; 9 10; 11 12])
+            @test output == Float32[58 64; 139 154]
+            @test evidence.provider_id == "enaction.cpu.zig.scalar"
+            @test evidence.implementation == :native
+
+            overflow = OperationRequest("enaction.tensor.f32.mul";
+                layout=(len=1,), minimum_support=:resilient)
+            @test_throws ErrorException execute_operation(overflow, Float32[floatmax(Float32)], Float32[2])
+            clear_provider_registry!()
+        end
+    end
+
     # ========================================================================
     # Platform Detection Tests
     # ========================================================================
