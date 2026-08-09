@@ -28,6 +28,7 @@ backend = select_backend(:matmul, 1_000_000)
 module AcceleratorGate
 
 using Dates
+using Libdl
 
 export AbstractBackend, JuliaBackend, RustBackend, ZigBackend,
        CUDABackend, ROCmBackend, MetalBackend,
@@ -59,7 +60,13 @@ export AbstractBackend, JuliaBackend, RustBackend, ZigBackend,
        # Operation registry
        register_operation!, supports_operation, supported_operations,
        # Backend specialties
-       BACKEND_SPECIALTIES, is_specialized
+       BACKEND_SPECIALTIES, is_specialized,
+       OperationRequest, CapabilityEvidence, ExecutionEvidence,
+       AbstractOperationProvider, FunctionProvider, EnactionZigProvider,
+       register_provider!, clear_provider_registry!, registered_providers,
+       provider_capabilities, plan_operation, execute_operation
+
+include("operations.jl")
 
 # ============================================================================
 # Backend Type Hierarchy
