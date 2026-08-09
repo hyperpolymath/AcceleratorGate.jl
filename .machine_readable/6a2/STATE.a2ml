@@ -7,8 +7,16 @@ project = "AcceleratorGate.jl"
 version = "0.1.0"
 last-updated = "2026-03-15"
 status = "active"
+wiki = "docs/berrywiki/"
+wiki-pages = 16
+wiki-tool = "metadatastician/berrywiki"
 
 [project-context]
 name = "AcceleratorGate.jl"
 completion-percentage = 5
 phase = "alpha"
+
+[coprocessor-documentation]
+human-index = "docs/berrywiki/Home.md"
+machine-index = "docs/berrywiki/Machine-Index.md"
+scope = "provider admission, deterministic planning, execution evidence, and shared Zig ABI"
