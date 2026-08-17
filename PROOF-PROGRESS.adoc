@@ -1,0 +1,105 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+//
+// Proof Progress Snapshot — AcceleratorGate.jl
+// Generated: 2026-08-14
+
+= AcceleratorGate.jl — Proof/Verification Guarantee Progress Snapshot
+:toc:
+:icons: font
+
+This document provides an indicative state of progress on formal guarantees for
+the AcceleratorGate.jl Julia package as of 2026-08-14. It consolidates information from:
+
+- `README.md` — Project overview and backend-selection claims
+- `src/` — Core type hierarchy and selection logic
+- `test/` — Test suite
+
+== Headline Status
+
+[cols="1,2,3",options="header"]
+|===
+| Component | Status | Details
+
+| Backend-selection layer | ✅ COMPLETE | Type hierarchy for compute backends
+
+| JuliaBackend | ✅ COMPLETE | CPU/backend type
+
+| CUDABackend | ✅ COMPLETE | NVIDIA CUDA backend type
+
+| ROCmBackend | ✅ COMPLETE | AMD ROCm backend type
+
+| MetalBackend | ✅ COMPLETE | Apple Metal backend type
+
+| TPUBackend | ✅ COMPLETE | Tensor Processing Unit backend type
+
+| NPUBackend | ✅ COMPLETE | Neural Processing Unit backend type
+
+| FPGABackend | ✅ COMPLETE | Field-Programmable Gate Array backend type
+
+| QPUBackend | ✅ COMPLETE | Quantum Processing Unit backend type
+
+| DSPBackend | ✅ COMPLETE | Digital Signal Processor backend type
+
+| Environment detection | ✅ COMPLETE | Availability detection for each backend
+
+| Platform probe | ✅ COMPLETE | Platform capability detection
+
+| select_backend | ✅ COMPLETE | Heuristic backend selection API
+
+| estimate_cost | ✅ COMPLETE | Cost estimation API
+
+| fits_on_device | ✅ COMPLETE | Memory/fit checking API
+
+| Kernel execution | ❌ NOT IMPLEMENTED | Does NOT execute GPU/accelerator computation
+
+| Vendor runtime linking | ❌ NOT IMPLEMENTED | Links no vendor runtimes (CUDA.jl, AMDGPU.jl, etc.)
+
+| Kernel implementation | ❌ NOT IMPLEMENTED | Contains no kernels
+|===
+
+**Overall:** AcceleratorGate.jl provides a **small, dependency-light backend-selection
+layer** extracted from Axiom.jl's backend module. It offers a type hierarchy of
+compute backends with environment-based availability detection, platform probe,
+and heuristic selection API. Crucially, it **does not execute computation** — it
+is purely the typing and selection layer.
+
+== Design Philosophy
+
+From README.md: AcceleratorGate.jl is deliberately narrower than KernelAbstractions.jl,
+GPUArrays.jl, Adapt.jl. It is purely typing and selection with no compute and minimal
+deps. It helps host packages decide and describe backends uniformly.
+
+**Does NOT:**
+- Execute GPU/accelerator computation
+- Contain kernels
+- Link vendor runtimes (CUDA.jl, AMDGPU.jl, Metal.jl, oneAPI.jl)
+
+== Backend Types
+
+[cols="1,2,1"]
+|===
+| Type | Description | Status
+| JuliaBackend | CPU | ✅ 
+| CUDABackend | NVIDIA CUDA | ✅ 
+| ROCmBackend | AMD ROCm | ✅ 
+| MetalBackend | Apple Metal | ✅ 
+| TPUBackend | Google TPU | ✅ 
+| NPUBackend | Neural Processing Unit | ✅ 
+| FPGABackend | FPGA | ✅ 
+| QPUBackend | Quantum Processing Unit | ✅ 
+| DSPBackend | Digital Signal Processor | ✅ 
+|===
+
+== Ecosystem Integration
+
+Used by: Axiom.jl (extracted from), LowLevel.jl, QuantumCircuit.jl
+
+== Document Information
+
+[cols="1,2"]
+|===
+| Generated | 2026-08-14 |
+| Author | Mistral Vibe |
+| Status | Complete |
+|===
