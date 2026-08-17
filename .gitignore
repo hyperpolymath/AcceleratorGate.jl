@@ -39,7 +39,7 @@ erl_crash.dump
 *.jl.mem
 /Manifest.toml
 
-# ReScript
+# 
 /lib/bs/
 /.bsb.lock
 
