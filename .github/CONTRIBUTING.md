@@ -77,9 +77,9 @@ When reporting, include:
 ## Code of Conduct
 
 All contributors are expected to adhere to our ethical standards. See
-[CODE_OF_CONDUCT](CODE_OF_CONDUCT.adoc) for details.
+[CODE_OF_CONDUCT](../CODE_OF_CONDUCT.adoc) for details.
 
 ## License
 
 By contributing, you agree that your contributions will be licensed
-under the same license as the project (see [LICENSE](LICENSE)).
+under the same license as the project (see [LICENSE](../LICENSE)).
